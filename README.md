@@ -65,6 +65,41 @@ cd backend && pytest tests/ -v
 
 See `api_contract.json` at the project root for the full OpenAPI 3.0 contract.
 
+## Frontend
+
+The frontend is a React 18 + TypeScript + Vite app located in `frontend/`.
+
+### Local development
+
+The backend and frontend run independently. Start both:
+
+```bash
+# Terminal 1 — Backend (from repo root)
+cd backend && uvicorn app.main:app --reload
+# API available at http://localhost:8000
+
+# Terminal 2 — Frontend (from repo root)
+cd frontend && npm install && npm run dev
+# UI available at http://localhost:5173
+```
+
+The Vite dev server proxies `/health` and `/v1/*` requests to `http://localhost:8000`, so no `VITE_API_URL` is needed locally.
+
+### Environment variables
+
+```bash
+cp frontend/.env.example frontend/.env
+```
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `VITE_API_URL` | `""` | Backend origin. Empty = use Vite proxy (local dev). Set to `http://localhost:8000` for production builds. |
+
+### Troubleshooting
+
+- **404 on `http://localhost:8000/`** — expected. The backend serves only the API (`/v1/*`, `/health`), not the UI. Open `http://localhost:5173` for the frontend.
+- **Network errors in the UI** — confirm the backend is running on port 8000.
+
 ## Project Structure
 
 

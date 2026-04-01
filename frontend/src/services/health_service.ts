@@ -1,8 +1,7 @@
-import { apiFetch } from "@/config/api_config";
+import { apiFetch } from "@/services/api_client";
+import { HealthResponse } from "@/types/api_types";
 
-export interface HealthResponse {
-  status: string;
-}
+export type { HealthResponse };
 
 export async function fetchHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>("/health");
