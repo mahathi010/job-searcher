@@ -1,12 +1,45 @@
-version: "3.8"
-
 services:
-  job_searcher:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: job_searcher
+    ports:
+      - "5440:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  migrate:
+    build:
+      context: ./backend
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: "postgresql+psycopg://postgres:postgres@db:5432/job_searcher"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
     build:
       context: ./backend
     ports:
       - "8000:8000"
-    env_file:
-      - .env
+    environment:
+      DATABASE_URL: "postgresql+psycopg://postgres:postgres@db:5432/job_searcher"
+      APP_ENV: production
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - ./backend:/app
+
+volumes:
+  pgdata:

@@ -1,0 +1,345 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "job_searcher API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://localhost:8000" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "health_check",
+        "tags": ["health"],
+        "responses": {
+          "200": {
+            "description": "Service healthy",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/job-posts/ingest": {
+      "post": {
+        "summary": "Ingest supported job posts",
+        "operationId": "ingest_job_posts",
+        "tags": ["job-posts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/IngestJobPostsRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Job posts ingested successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/JobPostResponse" }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/job-posts/": {
+      "get": {
+        "summary": "List active relevant job posts",
+        "operationId": "list_active_job_posts",
+        "tags": ["job-posts"],
+        "parameters": [
+          { "name": "job_type", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/JobTypeEnum" } },
+          { "name": "experience", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/ExperienceEnum" } },
+          { "name": "remote_status", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/RemoteStatusEnum" } },
+          { "name": "location", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 255 } },
+          { "name": "main_skillset", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 100 } },
+          { "name": "sponsorship", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/SponsorshipEnum" } },
+          { "name": "posted_date_from", "in": "query", "required": false, "schema": { "type": "string", "format": "date" } },
+          { "name": "posted_date_to", "in": "query", "required": false, "schema": { "type": "string", "format": "date" } },
+          { "name": "page", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+          { "name": "page_size", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
+          { "name": "sort_by", "in": "query", "required": false, "schema": { "type": "string", "default": "created_at" } },
+          { "name": "sort_order", "in": "query", "required": false, "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of active relevant job posts",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ListJobPostsResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/job-posts/{job_post_id}": {
+      "get": {
+        "summary": "Retrieve a single normalized job post",
+        "operationId": "get_job_post",
+        "tags": ["job-posts"],
+        "parameters": [
+          { "name": "job_post_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job post found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobPostResponse" }
+              }
+            }
+          },
+          "404": { "description": "Not found" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update editable normalized fields of a job post",
+        "operationId": "update_job_post",
+        "tags": ["job-posts"],
+        "parameters": [
+          { "name": "job_post_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobPostUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job post updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobPostResponse" }
+              }
+            }
+          },
+          "404": { "description": "Not found" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft-delete a job post",
+        "operationId": "delete_job_post",
+        "tags": ["job-posts"],
+        "parameters": [
+          { "name": "job_post_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Deleted" },
+          "404": { "description": "Not found" }
+        }
+      }
+    },
+    "/v1/job-posts/{job_post_id}/deactivate": {
+      "post": {
+        "summary": "Deactivate a job post",
+        "operationId": "deactivate_job_post",
+        "tags": ["job-posts"],
+        "parameters": [
+          { "name": "job_post_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job post deactivated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobPostResponse" }
+              }
+            }
+          },
+          "404": { "description": "Not found" },
+          "409": { "description": "Invalid lifecycle transition" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "service": { "type": "string" }
+        },
+        "required": ["status", "service"]
+      },
+      "RemoteStatusEnum": {
+        "type": "string",
+        "enum": ["remote", "hybrid", "onsite", "unknown"]
+      },
+      "ExperienceEnum": {
+        "type": "string",
+        "enum": ["junior", "mid", "senior", "lead", "unknown"]
+      },
+      "JobTypeEnum": {
+        "type": "string",
+        "enum": ["full_time", "part_time", "contract", "internship", "unknown"]
+      },
+      "SponsorshipEnum": {
+        "type": "string",
+        "enum": ["yes", "no", "unknown"]
+      },
+      "SourceAttributionEnum": {
+        "type": "string",
+        "enum": ["linkedin", "indeed", "dice", "company_site"]
+      },
+      "RelevanceOutcomeEnum": {
+        "type": "string",
+        "enum": ["ai", "ds", "ml", "excluded"]
+      },
+      "LifecycleStatusEnum": {
+        "type": "string",
+        "enum": ["active", "deactivated", "deleted"]
+      },
+      "IngestJobPostRequest": {
+        "type": "object",
+        "required": ["title", "company", "source_attribution"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "company": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "location": { "type": "string", "maxLength": 255, "nullable": true },
+          "remote_status": { "$ref": "#/components/schemas/RemoteStatusEnum", "default": "unknown" },
+          "experience": { "$ref": "#/components/schemas/ExperienceEnum", "default": "unknown" },
+          "job_type": { "$ref": "#/components/schemas/JobTypeEnum", "default": "unknown" },
+          "main_skillset": { "type": "string", "maxLength": 100, "nullable": true },
+          "skills": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "sponsorship": { "$ref": "#/components/schemas/SponsorshipEnum", "default": "unknown" },
+          "posted_date": { "type": "string", "format": "date", "nullable": true },
+          "mandatory_requirements_summary": { "type": "string", "nullable": true },
+          "source_attribution": { "$ref": "#/components/schemas/SourceAttributionEnum" },
+          "posting_link": { "type": "string", "maxLength": 2000, "nullable": true }
+        }
+      },
+      "IngestJobPostsRequest": {
+        "type": "object",
+        "required": ["postings"],
+        "properties": {
+          "postings": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/IngestJobPostRequest" },
+            "minItems": 1
+          }
+        }
+      },
+      "JobPostResponse": {
+        "type": "object",
+        "required": [
+          "id", "title", "company", "remote_status", "experience", "job_type",
+          "skills", "sponsorship", "source_attribution", "relevance_outcome",
+          "lifecycle_status", "created_at", "updated_at"
+        ],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "company": { "type": "string" },
+          "location": { "type": "string", "nullable": true },
+          "remote_status": { "$ref": "#/components/schemas/RemoteStatusEnum" },
+          "experience": { "$ref": "#/components/schemas/ExperienceEnum" },
+          "job_type": { "$ref": "#/components/schemas/JobTypeEnum" },
+          "main_skillset": { "type": "string", "nullable": true },
+          "skills": { "type": "array", "items": { "type": "string" } },
+          "sponsorship": { "$ref": "#/components/schemas/SponsorshipEnum" },
+          "posted_date": { "type": "string", "format": "date", "nullable": true },
+          "mandatory_requirements_summary": { "type": "string", "nullable": true },
+          "source_attribution": { "$ref": "#/components/schemas/SourceAttributionEnum" },
+          "posting_link": { "type": "string", "nullable": true },
+          "relevance_outcome": { "$ref": "#/components/schemas/RelevanceOutcomeEnum" },
+          "lifecycle_status": { "$ref": "#/components/schemas/LifecycleStatusEnum" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "JobPostUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 500, "nullable": true },
+          "company": { "type": "string", "minLength": 1, "maxLength": 255, "nullable": true },
+          "location": { "type": "string", "maxLength": 255, "nullable": true },
+          "remote_status": { "$ref": "#/components/schemas/RemoteStatusEnum", "nullable": true },
+          "experience": { "$ref": "#/components/schemas/ExperienceEnum", "nullable": true },
+          "job_type": { "$ref": "#/components/schemas/JobTypeEnum", "nullable": true },
+          "main_skillset": { "type": "string", "maxLength": 100, "nullable": true },
+          "skills": { "type": "array", "items": { "type": "string" }, "nullable": true },
+          "sponsorship": { "$ref": "#/components/schemas/SponsorshipEnum", "nullable": true },
+          "posted_date": { "type": "string", "format": "date", "nullable": true },
+          "mandatory_requirements_summary": { "type": "string", "nullable": true }
+        }
+      },
+      "ListJobPostsResponse": {
+        "type": "object",
+        "required": ["items", "total", "page", "page_size"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/JobPostResponse" }
+          },
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "page_size": { "type": "integer" }
+        }
+      },
+      "HTTPValidationError": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "loc": { "type": "array", "items": { "type": "string" } },
+                "msg": { "type": "string" },
+                "type": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

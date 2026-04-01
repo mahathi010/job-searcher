@@ -11,9 +11,11 @@
   backend/
   backend/app/
   backend/app/core/
+  backend/app/job_posts/source_job_posts/supported_source_ingestion/ingest_supported_jobs/
   backend/tests/
   backend/tests/unit/
   backend/migrations/
+  backend/migrations/versions/
   scripts/
   docs/
   docs/agent-guides/
@@ -47,6 +49,50 @@ Each feature folder has short file names (`models.py`, not `feature_models.py`).
 - **Repository Pattern:** `<feature>/repository.py`
 - **Reference Doc:** `CONVENTIONS.md at project root`
 
+## API Reference — /v1/job-posts
+
+| Method | Path | Status | Purpose |
+|--------|------|--------|---------|
+| `POST` | `/v1/job-posts/ingest` | 201 | Ingest list of supported job posts |
+| `GET` | `/v1/job-posts/` | 200 | List active relevant job posts (filtered + paginated) |
+| `GET` | `/v1/job-posts/{id}` | 200 | Retrieve single normalized job post |
+| `PUT` | `/v1/job-posts/{id}` | 200 | Update editable normalized fields |
+| `POST` | `/v1/job-posts/{id}/deactivate` | 200 | Deactivate a job post |
+| `DELETE` | `/v1/job-posts/{id}` | 204 | Soft-delete a job post |
+
+## Data Model — JobPost
+
+| Field | Type | Mutable | Notes |
+|-------|------|---------|-------|
+| `id` | UUID | — | PK |
+| `title` | String(500) | yes | |
+| `company` | String(255) | yes | |
+| `location` | String(255)? | yes | |
+| `remote_status` | Enum | yes | remote/hybrid/onsite/unknown |
+| `experience` | Enum | yes | junior/mid/senior/lead/unknown |
+| `job_type` | Enum | yes | full_time/part_time/contract/internship/unknown |
+| `main_skillset` | String(100)? | yes | |
+| `skills` | JSONB | yes | list of strings |
+| `sponsorship` | Enum | yes | yes/no/unknown |
+| `posted_date` | Date? | yes | |
+| `mandatory_requirements_summary` | Text? | yes | |
+| `source_attribution` | Enum | **NO** | linkedin/indeed/dice/company_site |
+| `posting_link` | String(2000)? | **NO** | |
+| `relevance_outcome` | Enum | **NO** | ai/ds/ml/excluded |
+| `lifecycle_status` | Enum | via actions | active/deactivated/deleted |
+| `created_at` | DateTime TZ | — | auto |
+| `updated_at` | DateTime TZ | — | auto |
+
+## Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DATABASE_URL` | `postgresql+psycopg://postgres:postgres@localhost:5432/job_searcher` | Async PostgreSQL DSN |
+| `APP_NAME` | `job_searcher` | Application name |
+| `APP_ENV` | `development` | Environment |
+| `APP_PORT` | `8000` | Listen port |
+| `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed CORS origins |
+
 ## Reference
 
 See `CONVENTIONS.md` at the project root for the full 6-file module
@@ -75,6 +121,9 @@ cd backend && uvicorn app.main:app --reload
 
 # Run tests (from backend/ directory)
 cd backend && pytest tests/ -v
+
+# Run migrations (from backend/ directory)
+cd backend && PYTHONPATH=. alembic upgrade head
 
 # Docker
 docker-compose up -d
