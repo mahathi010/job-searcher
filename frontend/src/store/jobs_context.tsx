@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from "react";
 import {
+  DisplayJob,
   Job,
   JobFilter,
   JobsState,
@@ -10,9 +11,14 @@ import {
 
 const initialFilter: JobFilter = {
   query: "",
-  status: "all",
   jobType: "all",
   sort: "recent",
+  remoteStatus: "all",
+  experience: "all",
+  sponsorship: "all",
+  postedDateFrom: "",
+  postedDateTo: "",
+  mainSkillset: "",
 };
 
 const initialState: JobsState = {
@@ -25,11 +31,14 @@ const initialState: JobsState = {
   ingestStep: IngestStep.List,
   ingestResults: [],
   ingestProgress: 0,
+  currentPage: 1,
+  totalCount: 0,
+  pageSize: 20,
 };
 
 type Action =
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_JOBS"; payload: Job[] }
+  | { type: "SET_JOBS"; payload: DisplayJob[] }
   | { type: "SET_ERROR"; payload: string | null }
   | { type: "SET_FILTER"; payload: Partial<JobFilter> }
   | { type: "RESET_FILTERS" }
@@ -41,7 +50,9 @@ type Action =
   | { type: "CLOSE_DRAWER" }
   | { type: "SET_INGEST_STEP"; payload: IngestStep }
   | { type: "SET_INGEST_RESULTS"; payload: IngestJobResult[] }
-  | { type: "SET_INGEST_PROGRESS"; payload: number };
+  | { type: "SET_INGEST_PROGRESS"; payload: number }
+  | { type: "SET_PAGE"; payload: number }
+  | { type: "SET_TOTAL"; payload: number };
 
 function reducer(state: JobsState, action: Action): JobsState {
   switch (action.type) {
@@ -52,9 +63,9 @@ function reducer(state: JobsState, action: Action): JobsState {
     case "SET_ERROR":
       return { ...state, error: action.payload, loading: false };
     case "SET_FILTER":
-      return { ...state, filters: { ...state.filters, ...action.payload } };
+      return { ...state, filters: { ...state.filters, ...action.payload }, currentPage: 1 };
     case "RESET_FILTERS":
-      return { ...state, filters: initialFilter };
+      return { ...state, filters: initialFilter, currentPage: 1 };
     case "SELECT_JOB": {
       const next = new Set(state.selectedIds);
       next.add(action.payload);
@@ -79,6 +90,10 @@ function reducer(state: JobsState, action: Action): JobsState {
       return { ...state, ingestResults: action.payload };
     case "SET_INGEST_PROGRESS":
       return { ...state, ingestProgress: action.payload };
+    case "SET_PAGE":
+      return { ...state, currentPage: action.payload };
+    case "SET_TOTAL":
+      return { ...state, totalCount: action.payload };
     default:
       return state;
   }
