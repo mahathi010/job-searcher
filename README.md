@@ -1,4 +1,4 @@
-# job_searcher - Frontend
+# job_searcher
 
 A backend service that ingests job postings from supported sources, normalizes them into consistent records, classifies them for AI/DS/ML relevance, and exposes them through a REST API for retrieval, filtering, and lifecycle management.
 
