@@ -1,8 +1,9 @@
-# job_searcher
+# job_searcher - Frontend
 
 A backend service that ingests job postings from supported sources, normalizes them into consistent records, classifies them for AI/DS/ML relevance, and exposes them through a REST API for retrieval, filtering, and lifecycle management.
 
 ## Setup
+
 
 ### Local (without Docker)
 
@@ -39,6 +40,7 @@ The API is available at `http://localhost:8000`. Interactive docs at `http://loc
 docker-compose up -d
 ```
 
+
 This starts:
 - `db` — PostgreSQL 16 on port `5440`
 - `migrate` — runs `alembic upgrade head` once
@@ -65,6 +67,7 @@ See `api_contract.json` at the project root for the full OpenAPI 3.0 contract.
 
 ## Project Structure
 
+
 - `backend/` — All backend code (app, tests, migrations)
 - `backend/app/core/` — Database engine, session, exceptions
 - `backend/app/job_posts/` — job_posts capability module
@@ -74,3 +77,4 @@ See `api_contract.json` at the project root for the full OpenAPI 3.0 contract.
 - `api_contract.json` — OpenAPI 3.0 contract
 
 See `CONVENTIONS.md` at the project root for the 6-file module pattern.
+

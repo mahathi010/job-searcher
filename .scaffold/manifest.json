@@ -2,42 +2,50 @@
   "version": 1,
   "project": {
     "name": "job_searcher",
-    "scaffold_type": "backend",
+    "scaffold_type": "frontend",
     "tech_stack": "Python 3.11",
     "capability_name": "job_searcher",
-    "platform": "Web",
+    "platform": "Mobile",
     "project_size": "Small"
   },
   "structure": {
     "directories": [
-      "backend/",
-      "backend/app/",
-      "backend/app/core/",
-      "backend/tests/",
-      "backend/tests/unit/",
-      "backend/migrations/",
-      "scripts/",
+      "frontend/",
+      "frontend/src/",
+      "frontend/src/components/",
+      "frontend/src/store/",
+      "frontend/src/services/",
+      "frontend/src/models/",
+      "frontend/src/hooks/",
+      "frontend/src/utils/",
+      "frontend/src/types/",
+      "frontend/src/constants/",
+      "frontend/src/config/",
+      "frontend/src/assets/",
+      "frontend/src/styles/",
+      "frontend/src/screens/",
+      "frontend/src/navigation/",
+      "frontend/src/native-modules/",
+      "frontend/src/platform-assets/",
+      "frontend/tests/",
       "docs/",
-      "docs/agent-guides/"
+      "scripts/"
     ]
   },
   "conventions": {
-    "naming_style": "snake_case for all files and folders",
-    "layout": "feature subdirectories under backend/app/ capability folder (backend/app/{cap}/feature_name/models.py)",
-    "test_pattern": "test_*.py",
-    "model_pattern": "<feature>/models.py",
-    "schema_pattern": "<feature>/schema.py",
-    "api_pattern": "<feature>/api.py",
-    "service_pattern": "<feature>/service.py",
-    "repository_pattern": "<feature>/repository.py",
-    "reference_doc": "CONVENTIONS.md at project root"
+    "naming_style": "snake_case for files, PascalCase for components",
+    "test_pattern": "*.test.tsx / *.test.ts",
+    "service_pattern": "*_service.ts",
+    "model_pattern": "*_models.ts",
+    "hook_pattern": "use_*.ts"
   },
-  "path_mappings": {},
+  "path_mappings": {
+    "src/main.tsx": "frontend/src/main.tsx",
+    "src/styles/tokens.ts": "frontend/src/tokens.ts"
+  },
   "rules": [
     "Do NOT reorganize the scaffolded folder structure.",
     "Place files in the directories indicated by path_mappings.",
-    "Follow the naming conventions above for new files.",
-    "Read CONVENTIONS.md at the project root for the 6-file module pattern and naming conventions.",
-    "Each feature gets its own subdirectory under the capability folder. Files use short names (models.py, api.py) \u2014 NOT prefixed names."
+    "Follow the naming conventions above for new files."
   ]
 }
