@@ -61,6 +61,13 @@ export interface IngestJobResult {
   message?: string;
 }
 
+export interface PaginatedJobsResponse {
+  jobs: Job[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 export interface JobsState {
   jobs: Job[];
   loading: boolean;
@@ -71,4 +78,7 @@ export interface JobsState {
   ingestStep: IngestStep;
   ingestResults: IngestJobResult[];
   ingestProgress: number;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
 }

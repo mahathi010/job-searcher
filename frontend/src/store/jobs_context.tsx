@@ -25,6 +25,9 @@ const initialState: JobsState = {
   ingestStep: IngestStep.List,
   ingestResults: [],
   ingestProgress: 0,
+  totalCount: 0,
+  currentPage: 1,
+  pageSize: 20,
 };
 
 type Action =
@@ -41,7 +44,8 @@ type Action =
   | { type: "CLOSE_DRAWER" }
   | { type: "SET_INGEST_STEP"; payload: IngestStep }
   | { type: "SET_INGEST_RESULTS"; payload: IngestJobResult[] }
-  | { type: "SET_INGEST_PROGRESS"; payload: number };
+  | { type: "SET_INGEST_PROGRESS"; payload: number }
+  | { type: "SET_PAGINATION"; payload: { total: number; page: number; page_size: number } };
 
 function reducer(state: JobsState, action: Action): JobsState {
   switch (action.type) {
@@ -79,6 +83,13 @@ function reducer(state: JobsState, action: Action): JobsState {
       return { ...state, ingestResults: action.payload };
     case "SET_INGEST_PROGRESS":
       return { ...state, ingestProgress: action.payload };
+    case "SET_PAGINATION":
+      return {
+        ...state,
+        totalCount: action.payload.total,
+        currentPage: action.payload.page,
+        pageSize: action.payload.page_size,
+      };
     default:
       return state;
   }

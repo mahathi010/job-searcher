@@ -8,8 +8,12 @@ export function useJobs() {
   const load = useCallback(async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const jobs = await fetchJobs(state.filters);
-      dispatch({ type: "SET_JOBS", payload: jobs });
+      const result = await fetchJobs(state.filters);
+      dispatch({ type: "SET_JOBS", payload: result.jobs });
+      dispatch({
+        type: "SET_PAGINATION",
+        payload: { total: result.total, page: result.page, page_size: result.page_size },
+      });
     } catch (err) {
       dispatch({
         type: "SET_ERROR",

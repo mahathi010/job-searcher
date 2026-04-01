@@ -4,7 +4,7 @@ import { useJobs } from "@/hooks/use_jobs";
 import { useJobSelection } from "@/hooks/use_job_selection";
 import { useHealth } from "@/hooks/use_health";
 import { useJobsContext } from "@/store/jobs_context";
-import { simulateIngest } from "@/services/jobs_service";
+import { ingestJobs } from "@/services/jobs_service";
 import { IngestStep, IngestJobResultStatus } from "@/models/job_models";
 import { JobCard } from "@/components/JobCard";
 import { JobFilters } from "@/components/JobFilters";
@@ -37,8 +37,7 @@ export const JobsListScreen: React.FC = () => {
   };
 
   const handleIngestComplete = useCallback(async () => {
-    const ids = selectedJobs.map((j) => j.id);
-    const results = await simulateIngest(ids);
+    const results = await ingestJobs(selectedJobs);
     dispatch({ type: "SET_INGEST_RESULTS", payload: results });
     dispatch({ type: "SET_INGEST_STEP", payload: IngestStep.Result });
   }, [selectedJobs, dispatch]);
@@ -141,7 +140,7 @@ export const JobsListScreen: React.FC = () => {
         {/* Filters */}
         <div className="mb-5">
           <JobFilters
-            totalCount={jobs.length}
+            totalCount={state.totalCount || jobs.length}
             filteredCount={jobs.length}
             onRefresh={refresh}
           />

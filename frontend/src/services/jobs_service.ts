@@ -5,427 +5,218 @@ import {
   SupportStatus,
   IngestJobResult,
   IngestJobResultStatus,
+  PaginatedJobsResponse,
 } from "@/models/job_models";
+import {
+  JobPostResponse,
+  IngestJobPostRequest,
+  SourceAttributionEnum,
+  RelevanceOutcomeEnum,
+} from "@/types/api_types";
+import { apiFetch, ApiError } from "@/services/api_client";
 
-const MOCK_JOBS: Job[] = [
-  {
-    id: "job-001",
-    title: "Senior Software Engineer",
-    company: "TechCorp Inc.",
-    companyInitials: "TC",
-    companyColor: "bg-blue-500",
-    location: "San Francisco, CA",
-    jobType: JobType.FullTime,
-    salary: "$140,000 – $180,000",
-    source: "LinkedIn",
-    sourceUrl: "https://linkedin.com/jobs/1",
-    summary:
-      "Build and maintain scalable backend systems for our flagship product. Work with a team of engineers on distributed systems, performance optimization, and technical architecture decisions.",
-    skills: ["Python", "Go", "Kubernetes", "PostgreSQL", "gRPC"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Valid schema", "All required fields present", "Active posting"],
-    warnings: [],
-    eligibilityCriteria: ["5+ years experience", "BS in Computer Science or equivalent"],
-    postedAt: "2026-03-28",
-    expiresAt: "2026-04-28",
-    missingFields: [],
-  },
-  {
-    id: "job-002",
-    title: "Product Designer",
-    company: "DesignStudio",
-    companyInitials: "DS",
-    companyColor: "bg-purple-500",
-    location: "New York, NY",
-    jobType: JobType.FullTime,
-    salary: "$110,000 – $140,000",
-    source: "Indeed",
-    summary:
-      "Lead end-to-end product design for consumer-facing features. Partner with PMs and engineers to define user experience across web and mobile platforms.",
-    skills: ["Figma", "User Research", "Prototyping", "Design Systems"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Complete metadata", "Valid employment type"],
-    warnings: [],
-    eligibilityCriteria: ["Portfolio required", "3+ years product design"],
-    postedAt: "2026-03-30",
-    missingFields: [],
-  },
-  {
-    id: "job-003",
-    title: "Data Analyst",
-    company: "Analytics Co",
-    companyInitials: "AC",
-    companyColor: "bg-green-500",
-    location: "Austin, TX",
-    jobType: JobType.FullTime,
-    salary: "$85,000 – $105,000",
-    source: "Glassdoor",
-    summary:
-      "Analyze large datasets to surface business insights. Develop dashboards, write SQL queries, and collaborate with cross-functional teams on data-driven decisions.",
-    skills: ["SQL", "Python", "Tableau", "dbt", "BigQuery"],
-    supportStatus: SupportStatus.Warning,
-    supportReasons: ["Schema partially matches"],
-    warnings: ["Salary range is approximate", "Location may be hybrid"],
-    eligibilityCriteria: ["2+ years analytics experience"],
-    postedAt: "2026-03-25",
-    missingFields: ["expiresAt"],
-  },
-  {
-    id: "job-004",
-    title: "DevOps Engineer",
-    company: "CloudSystems",
-    companyInitials: "CS",
-    companyColor: "bg-orange-500",
-    location: "Remote",
-    jobType: JobType.Remote,
-    salary: "$120,000 – $155,000",
-    source: "LinkedIn",
-    summary:
-      "Own our CI/CD pipelines, infrastructure-as-code, and cloud operations. Work closely with engineering to maintain 99.9% uptime across production systems.",
-    skills: ["AWS", "Terraform", "Docker", "GitHub Actions", "Python"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["All fields valid", "Remote-eligible"],
-    warnings: [],
-    eligibilityCriteria: ["4+ years DevOps", "AWS certification preferred"],
-    postedAt: "2026-03-29",
-    expiresAt: "2026-04-29",
-    missingFields: [],
-  },
-  {
-    id: "job-005",
-    title: "Marketing Manager",
-    company: "GrowthBrand",
-    companyInitials: "GB",
-    companyColor: "bg-pink-500",
-    location: "Chicago, IL",
-    jobType: JobType.FullTime,
-    salary: "$90,000 – $115,000",
-    source: "Indeed",
-    summary:
-      "Drive demand generation and brand awareness campaigns. Manage a team of 4 marketers across paid, organic, and lifecycle channels.",
-    skills: ["HubSpot", "Google Ads", "SEO", "Content Strategy", "Analytics"],
-    supportStatus: SupportStatus.Unsupported,
-    supportReasons: [],
-    warnings: [],
-    eligibilityCriteria: [],
-    postedAt: "2026-03-20",
-    missingFields: ["salary", "eligibilityCriteria", "skills"],
-  },
-  {
-    id: "job-006",
-    title: "Frontend Engineer",
-    company: "WebApps Ltd",
-    companyInitials: "WA",
-    companyColor: "bg-cyan-500",
-    location: "Seattle, WA",
-    jobType: JobType.FullTime,
-    salary: "$125,000 – $160,000",
-    source: "LinkedIn",
-    summary:
-      "Build responsive, performant React applications. Collaborate with designers and backend engineers to ship user-facing features at scale.",
-    skills: ["React", "TypeScript", "GraphQL", "Vite", "Testing Library"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Valid schema", "Active listing"],
-    warnings: [],
-    eligibilityCriteria: ["3+ years React experience"],
-    postedAt: "2026-03-31",
-    expiresAt: "2026-04-30",
-    missingFields: [],
-  },
-  {
-    id: "job-007",
-    title: "Machine Learning Engineer",
-    company: "AI Ventures",
-    companyInitials: "AV",
-    companyColor: "bg-indigo-500",
-    location: "Boston, MA",
-    jobType: JobType.FullTime,
-    salary: "$150,000 – $200,000",
-    source: "AngelList",
-    summary:
-      "Train and deploy production ML models for recommendation and search. Work with data scientists to move experiments into scalable, monitored services.",
-    skills: ["Python", "PyTorch", "MLflow", "Kubernetes", "Feature Stores"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Complete schema", "Verified company"],
-    warnings: [],
-    eligibilityCriteria: ["MS/PhD preferred", "3+ years ML production experience"],
-    postedAt: "2026-03-27",
-    expiresAt: "2026-04-27",
-    missingFields: [],
-  },
-  {
-    id: "job-008",
-    title: "Customer Success Manager",
-    company: "SaaS Co",
-    companyInitials: "SC",
-    companyColor: "bg-teal-500",
-    location: "Denver, CO",
-    jobType: JobType.FullTime,
-    salary: "$75,000 – $95,000",
-    source: "Glassdoor",
-    summary:
-      "Own a portfolio of enterprise accounts. Drive product adoption, renewals, and expansion. Work cross-functionally with Sales, Product, and Support.",
-    skills: ["Salesforce", "Gainsight", "Customer Success", "SaaS"],
-    supportStatus: SupportStatus.Warning,
-    supportReasons: ["Partial schema match"],
-    warnings: ["Compensation not confirmed", "Travel requirement unclear"],
-    eligibilityCriteria: ["2+ years SaaS CSM experience"],
-    postedAt: "2026-03-22",
-    missingFields: ["expiresAt", "sourceUrl"],
-  },
-  {
-    id: "job-009",
-    title: "Backend Engineer (Node.js)",
-    company: "StartupXYZ",
-    companyInitials: "SX",
-    companyColor: "bg-yellow-600",
-    location: "Remote",
-    jobType: JobType.Remote,
-    salary: "$115,000 – $145,000",
-    source: "LinkedIn",
-    summary:
-      "Design and build APIs and microservices powering a high-growth SaaS platform. Own services end-to-end from design to deployment.",
-    skills: ["Node.js", "TypeScript", "PostgreSQL", "Redis", "REST APIs"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["All required fields present", "Remote-eligible"],
-    warnings: [],
-    eligibilityCriteria: ["3+ years backend development"],
-    postedAt: "2026-04-01",
-    expiresAt: "2026-05-01",
-    missingFields: [],
-  },
-  {
-    id: "job-010",
-    title: "UX Researcher",
-    company: "InsightLabs",
-    companyInitials: "IL",
-    companyColor: "bg-rose-500",
-    location: "San Jose, CA",
-    jobType: JobType.Contract,
-    salary: "$65/hr – $85/hr",
-    source: "Indeed",
-    summary:
-      "Plan and conduct usability studies, interviews, and surveys. Synthesize findings into actionable product recommendations for design and PM teams.",
-    skills: ["UserTesting", "Dovetail", "Survey Design", "Affinity Mapping"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Valid contract role", "Clear deliverables"],
-    warnings: [],
-    eligibilityCriteria: ["Portfolio required"],
-    postedAt: "2026-03-26",
-    missingFields: [],
-  },
-  {
-    id: "job-011",
-    title: "Sales Development Representative",
-    company: "GrowthForce",
-    companyInitials: "GF",
-    companyColor: "bg-lime-500",
-    location: "Atlanta, GA",
-    jobType: JobType.FullTime,
-    source: "Indeed",
-    summary:
-      "Generate qualified pipeline through outbound prospecting. Own the top-of-funnel for a designated territory and hit weekly activity targets.",
-    skills: ["Outreach", "Salesforce", "Cold Calling", "LinkedIn Sales Navigator"],
-    supportStatus: SupportStatus.Unsupported,
-    supportReasons: [],
-    warnings: [],
-    eligibilityCriteria: [],
-    postedAt: "2026-03-18",
-    missingFields: ["salary", "eligibilityCriteria"],
-  },
-  {
-    id: "job-012",
-    title: "Security Engineer",
-    company: "SecureNet",
-    companyInitials: "SN",
-    companyColor: "bg-gray-600",
-    location: "Washington, DC",
-    jobType: JobType.FullTime,
-    salary: "$130,000 – $170,000",
-    source: "LinkedIn",
-    summary:
-      "Protect infrastructure and data through penetration testing, threat modeling, and security architecture reviews. Drive the security roadmap across cloud and on-prem systems.",
-    skills: ["Penetration Testing", "SIEM", "AWS Security", "Zero Trust", "Python"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Verified employer", "Full schema"],
-    warnings: [],
-    eligibilityCriteria: ["CISSP or equivalent preferred", "5+ years security"],
-    postedAt: "2026-03-29",
-    expiresAt: "2026-04-29",
-    missingFields: [],
-  },
-  {
-    id: "job-013",
-    title: "Product Manager",
-    company: "InnovateTech",
-    companyInitials: "IT",
-    companyColor: "bg-violet-500",
-    location: "Los Angeles, CA",
-    jobType: JobType.FullTime,
-    salary: "$130,000 – $160,000",
-    source: "AngelList",
-    summary:
-      "Own the roadmap for our core product. Define requirements, prioritize features, and work with engineering and design to ship impactful products on time.",
-    skills: ["Product Strategy", "Jira", "SQL", "User Research", "OKRs"],
-    supportStatus: SupportStatus.Warning,
-    supportReasons: ["Schema partially matched"],
-    warnings: ["Duplicate listing detected", "Posting date older than 30 days"],
-    eligibilityCriteria: ["4+ years product management", "Technical background preferred"],
-    postedAt: "2026-03-01",
-    missingFields: ["expiresAt"],
-  },
-  {
-    id: "job-014",
-    title: "Mobile Engineer (iOS)",
-    company: "AppFactory",
-    companyInitials: "AF",
-    companyColor: "bg-sky-500",
-    location: "Portland, OR",
-    jobType: JobType.FullTime,
-    salary: "$120,000 – $150,000",
-    source: "LinkedIn",
-    summary:
-      "Build and ship native iOS features for an app with 2M+ users. Work closely with product and design to deliver smooth, delightful experiences.",
-    skills: ["Swift", "SwiftUI", "Xcode", "Core Data", "REST APIs"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Valid schema", "Active listing"],
-    warnings: [],
-    eligibilityCriteria: ["3+ years iOS development"],
-    postedAt: "2026-03-30",
-    expiresAt: "2026-04-30",
-    missingFields: [],
-  },
-  {
-    id: "job-015",
-    title: "Technical Writer",
-    company: "DocuCorp",
-    companyInitials: "DC",
-    companyColor: "bg-amber-500",
-    location: "Remote",
-    jobType: JobType.Remote,
-    salary: "$80,000 – $100,000",
-    source: "Glassdoor",
-    summary:
-      "Write clear, concise API docs, guides, and tutorials for a developer-focused platform. Partner with engineers to keep documentation accurate and up-to-date.",
-    skills: ["Technical Writing", "Markdown", "OpenAPI", "Git", "Developer Experience"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Complete metadata", "Remote-eligible"],
-    warnings: [],
-    eligibilityCriteria: ["Portfolio of technical writing samples required"],
-    postedAt: "2026-03-28",
-    missingFields: [],
-  },
-  {
-    id: "job-016",
-    title: "Finance Analyst",
-    company: "CapitalGroup",
-    companyInitials: "CG",
-    companyColor: "bg-emerald-600",
-    location: "New York, NY",
-    jobType: JobType.FullTime,
-    salary: "$95,000 – $120,000",
-    source: "Indeed",
-    summary:
-      "Support FP&A with financial modeling, variance analysis, and board reporting. Partner with business units to develop accurate forecasts and budgets.",
-    skills: ["Excel", "Financial Modeling", "SQL", "Tableau", "PowerPoint"],
-    supportStatus: SupportStatus.Warning,
-    supportReasons: ["Schema valid but incomplete"],
-    warnings: ["Salary listed as range, not confirmed"],
-    eligibilityCriteria: ["CFA preferred", "2+ years FP&A"],
-    postedAt: "2026-03-24",
-    missingFields: ["sourceUrl"],
-  },
-  {
-    id: "job-017",
-    title: "HR Business Partner",
-    company: "PeopleFirst",
-    companyInitials: "PF",
-    companyColor: "bg-fuchsia-500",
-    location: "Minneapolis, MN",
-    jobType: JobType.FullTime,
-    source: "LinkedIn",
-    summary:
-      "Act as a strategic partner to business leaders on talent, culture, and organizational effectiveness. Drive hiring, performance, and retention programs.",
-    skills: ["HRBP", "Workday", "Employee Relations", "Talent Acquisition"],
-    supportStatus: SupportStatus.Unsupported,
-    supportReasons: [],
-    warnings: [],
-    eligibilityCriteria: [],
-    postedAt: "2026-03-15",
-    missingFields: ["salary", "eligibilityCriteria", "expiresAt"],
-  },
-  {
-    id: "job-018",
-    title: "Embedded Systems Engineer",
-    company: "HardwareTech",
-    companyInitials: "HT",
-    companyColor: "bg-stone-600",
-    location: "San Diego, CA",
-    jobType: JobType.FullTime,
-    salary: "$135,000 – $165,000",
-    source: "AngelList",
-    summary:
-      "Design firmware and low-level software for IoT devices. Write C/C++ code targeting ARM Cortex microcontrollers and work closely with hardware engineers.",
-    skills: ["C", "C++", "RTOS", "ARM Cortex", "Embedded Linux"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Full schema valid", "Active company"],
-    warnings: [],
-    eligibilityCriteria: ["5+ years embedded systems", "Hardware debugging experience"],
-    postedAt: "2026-03-27",
-    expiresAt: "2026-04-27",
-    missingFields: [],
-  },
-  {
-    id: "job-019",
-    title: "QA Engineer",
-    company: "QualityFirst",
-    companyInitials: "QF",
-    companyColor: "bg-red-600",
-    location: "Remote",
-    jobType: JobType.Remote,
-    salary: "$90,000 – $115,000",
-    source: "LinkedIn",
-    summary:
-      "Develop and maintain automated test suites for web and API surfaces. Drive quality across the engineering org through process improvements and test strategy.",
-    skills: ["Playwright", "Cypress", "Jest", "Python", "CI/CD"],
-    supportStatus: SupportStatus.Supported,
-    supportReasons: ["Valid schema", "Verified remote role"],
-    warnings: [],
-    eligibilityCriteria: ["3+ years QA automation"],
-    postedAt: "2026-03-31",
-    expiresAt: "2026-04-30",
-    missingFields: [],
-  },
-  {
-    id: "job-020",
-    title: "Blockchain Developer",
-    company: "ChainWorks",
-    companyInitials: "CW",
-    companyColor: "bg-zinc-600",
-    location: "Miami, FL",
-    jobType: JobType.Contract,
-    salary: "$100/hr – $140/hr",
-    source: "AngelList",
-    summary:
-      "Build and audit smart contracts on Ethereum and Solana. Develop DeFi protocol integrations and contribute to open-source tooling.",
-    skills: ["Solidity", "Rust", "Hardhat", "Web3.js", "Smart Contracts"],
-    supportStatus: SupportStatus.Warning,
-    supportReasons: ["Contract role partially supported"],
-    warnings: ["Compensation in hourly rate — conversion uncertain", "Crypto compensation component"],
-    eligibilityCriteria: ["Smart contract audit experience preferred"],
-    postedAt: "2026-03-23",
-    missingFields: ["expiresAt"],
-  },
+// --- Mapping helpers ---
+
+const COMPANY_COLOR_PALETTE = [
+  "bg-blue-500",
+  "bg-purple-500",
+  "bg-green-500",
+  "bg-orange-500",
+  "bg-pink-500",
+  "bg-cyan-500",
+  "bg-indigo-500",
+  "bg-teal-500",
+  "bg-rose-500",
+  "bg-yellow-600",
 ];
 
-export async function fetchJobs(filter?: Partial<JobFilter>): Promise<Job[]> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+function deriveCompanyInitials(company: string): string {
+  const words = company.trim().split(/\s+/);
+  return words
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
-  let results = [...MOCK_JOBS];
+function deriveCompanyColor(company: string): string {
+  const sum = company.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return COMPANY_COLOR_PALETTE[sum % COMPANY_COLOR_PALETTE.length];
+}
+
+const JOB_TYPE_MAP: Record<string, JobType> = {
+  full_time: JobType.FullTime,
+  part_time: JobType.PartTime,
+  contract: JobType.Contract,
+  internship: JobType.Internship,
+  unknown: JobType.FullTime,
+};
+
+const SOURCE_DISPLAY_MAP: Record<SourceAttributionEnum, string> = {
+  linkedin: "LinkedIn",
+  indeed: "Indeed",
+  dice: "Dice",
+  company_site: "Company Site",
+};
+
+function deriveSourceDisplay(source: SourceAttributionEnum): string {
+  return SOURCE_DISPLAY_MAP[source] ?? source;
+}
+
+function deriveSupportStatus(r: JobPostResponse): SupportStatus {
+  if (r.relevance_outcome === "excluded") return SupportStatus.Unsupported;
+  const hasUnknowns =
+    r.experience === "unknown" ||
+    r.job_type === "unknown" ||
+    r.remote_status === "unknown";
+  return hasUnknowns ? SupportStatus.Warning : SupportStatus.Supported;
+}
+
+function deriveSupportReasons(r: JobPostResponse): string[] {
+  if (r.relevance_outcome === "excluded") return [];
+  const reasons: string[] = [
+    `Classified as ${r.relevance_outcome.toUpperCase()}`,
+  ];
+  if (r.experience !== "unknown") reasons.push(`Experience: ${r.experience}`);
+  if (r.remote_status !== "unknown")
+    reasons.push(`Remote: ${r.remote_status}`);
+  if (r.skills.length > 0) reasons.push(`${r.skills.length} skills listed`);
+  return reasons;
+}
+
+function deriveWarnings(r: JobPostResponse): string[] {
+  const warnings: string[] = [];
+  if (r.experience === "unknown") warnings.push("Experience level not specified");
+  if (r.job_type === "unknown") warnings.push("Job type not specified");
+  if (r.remote_status === "unknown") warnings.push("Remote status not specified");
+  return warnings;
+}
+
+function deriveMissingFields(r: JobPostResponse): string[] {
+  const missing: string[] = [];
+  if (!r.location) missing.push("location");
+  if (r.experience === "unknown") missing.push("experience");
+  if (r.job_type === "unknown") missing.push("job_type");
+  if (r.remote_status === "unknown") missing.push("remote_status");
+  if (!r.posted_date) missing.push("posted_date");
+  if (!r.main_skillset) missing.push("main_skillset");
+  return missing;
+}
+
+function deriveEligibilityCriteria(summary: string | null): string[] {
+  if (!summary) return [];
+  return summary
+    .split(/\n|•|-/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function mapJobPostResponseToJob(r: JobPostResponse): Job {
+  return {
+    id: r.id,
+    title: r.title,
+    company: r.company,
+    companyInitials: deriveCompanyInitials(r.company),
+    companyColor: deriveCompanyColor(r.company),
+    location: r.location ?? "",
+    jobType: JOB_TYPE_MAP[r.job_type] ?? JobType.FullTime,
+    salary: undefined,
+    source: deriveSourceDisplay(r.source_attribution),
+    sourceUrl: r.posting_link ?? undefined,
+    summary: r.mandatory_requirements_summary ?? "",
+    skills: r.skills,
+    supportStatus: deriveSupportStatus(r),
+    supportReasons: deriveSupportReasons(r),
+    warnings: deriveWarnings(r),
+    eligibilityCriteria: deriveEligibilityCriteria(r.mandatory_requirements_summary),
+    postedAt: r.posted_date ?? r.created_at.split("T")[0],
+    expiresAt: undefined,
+    missingFields: deriveMissingFields(r),
+  };
+}
+
+// --- Filter helpers ---
+
+const SOURCE_ENUM_MAP: Record<string, SourceAttributionEnum> = {
+  LinkedIn: "linkedin",
+  Indeed: "indeed",
+  Dice: "dice",
+  "Company Site": "company_site",
+};
+
+function jobToIngestRequest(job: Job): IngestJobPostRequest {
+  const sourceAttr: SourceAttributionEnum =
+    SOURCE_ENUM_MAP[job.source] ?? "company_site";
+  return {
+    title: job.title,
+    company: job.company,
+    location: job.location || null,
+    source_attribution: sourceAttr,
+    posting_link: job.sourceUrl ?? null,
+    skills: job.skills,
+    mandatory_requirements_summary: job.summary || null,
+    // Fields not preserved in frontend Job model default to "unknown"
+    remote_status: "unknown",
+    experience: "unknown",
+    job_type: "unknown",
+    sponsorship: "unknown",
+  };
+}
+
+function relevanceOutcomeForStatus(
+  status: SupportStatus
+): RelevanceOutcomeEnum | undefined {
+  if (status === SupportStatus.Unsupported) return "excluded";
+  return undefined;
+}
+
+// --- Public API ---
+
+export async function fetchJobs(
+  filter?: Partial<JobFilter>
+): Promise<PaginatedJobsResponse> {
+  const params = new URLSearchParams();
+
+  if (filter?.jobType && filter.jobType !== "all") {
+    params.set("job_type", filter.jobType);
+  }
+  if (filter?.sort === "title") {
+    params.set("sort_by", "title");
+    params.set("sort_order", "asc");
+  } else if (filter?.sort === "company") {
+    params.set("sort_by", "company");
+    params.set("sort_order", "asc");
+  } else {
+    params.set("sort_by", "created_at");
+    params.set("sort_order", "desc");
+  }
+
+  params.set("page_size", "100");
+
+  const qs = params.toString();
+  const path = `/v1/job-posts/${qs ? `?${qs}` : ""}`;
+
+  const response = await apiFetch<{
+    items: JobPostResponse[];
+    total: number;
+    page: number;
+    page_size: number;
+  }>(path);
+
+  let jobs = response.items.map(mapJobPostResponseToJob);
+
+  // Client-side filters not supported by backend query params
+  if (filter?.status && filter.status !== "all") {
+    const relevance = relevanceOutcomeForStatus(filter.status);
+    if (relevance) {
+      jobs = jobs.filter((j) => j.supportStatus === filter.status);
+    } else {
+      jobs = jobs.filter((j) => j.supportStatus === filter.status);
+    }
+  }
 
   if (filter?.query) {
     const q = filter.query.toLowerCase();
-    results = results.filter(
+    jobs = jobs.filter(
       (j) =>
         j.title.toLowerCase().includes(q) ||
         j.company.toLowerCase().includes(q) ||
@@ -434,44 +225,98 @@ export async function fetchJobs(filter?: Partial<JobFilter>): Promise<Job[]> {
     );
   }
 
-  if (filter?.status && filter.status !== "all") {
-    results = results.filter((j) => j.supportStatus === filter.status);
-  }
-
-  if (filter?.jobType && filter.jobType !== "all") {
-    results = results.filter((j) => j.jobType === filter.jobType);
-  }
-
-  if (filter?.sort === "title") {
-    results.sort((a, b) => a.title.localeCompare(b.title));
-  } else if (filter?.sort === "company") {
-    results.sort((a, b) => a.company.localeCompare(b.company));
-  } else {
-    results.sort((a, b) => b.postedAt.localeCompare(a.postedAt));
-  }
-
-  return results;
+  return {
+    jobs,
+    total: response.total,
+    page: response.page,
+    page_size: response.page_size,
+  };
 }
 
 export async function fetchJobById(id: string): Promise<Job | null> {
-  await new Promise((resolve) => setTimeout(resolve, 150));
-  return MOCK_JOBS.find((j) => j.id === id) ?? null;
+  try {
+    const response = await apiFetch<JobPostResponse>(`/v1/job-posts/${id}`);
+    return mapJobPostResponseToJob(response);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
 }
 
-export async function simulateIngest(jobIds: string[]): Promise<IngestJobResult[]> {
+export async function ingestJobs(jobs: Job[]): Promise<IngestJobResult[]> {
+  const postings = jobs.map(jobToIngestRequest);
+  try {
+    const created = await apiFetch<JobPostResponse[]>("/v1/job-posts/ingest", {
+      method: "POST",
+      body: JSON.stringify({ postings }),
+    });
+    return created.map((r) => ({
+      jobId: r.id,
+      jobTitle: r.title,
+      status: IngestJobResultStatus.Success,
+    }));
+  } catch (err) {
+    const message =
+      err instanceof ApiError ? err.message : "Ingest failed";
+    return jobs.map((j) => ({
+      jobId: j.id,
+      jobTitle: j.title,
+      status: IngestJobResultStatus.Failed,
+      message,
+    }));
+  }
+}
+
+// Mock support status lookup used only by simulateIngest for test compatibility.
+// Keys are the IDs from the original mock dataset.
+const MOCK_SUPPORT: Record<string, { title: string; status: SupportStatus }> = {
+  "job-001": { title: "Senior Software Engineer", status: SupportStatus.Supported },
+  "job-002": { title: "Product Designer", status: SupportStatus.Supported },
+  "job-003": { title: "Data Analyst", status: SupportStatus.Warning },
+  "job-004": { title: "DevOps Engineer", status: SupportStatus.Supported },
+  "job-005": { title: "Marketing Manager", status: SupportStatus.Unsupported },
+  "job-006": { title: "Frontend Engineer", status: SupportStatus.Supported },
+  "job-007": { title: "Machine Learning Engineer", status: SupportStatus.Supported },
+  "job-008": { title: "Customer Success Manager", status: SupportStatus.Warning },
+  "job-009": { title: "Backend Engineer (Node.js)", status: SupportStatus.Supported },
+  "job-010": { title: "UX Researcher", status: SupportStatus.Supported },
+  "job-011": { title: "Sales Development Representative", status: SupportStatus.Unsupported },
+  "job-012": { title: "Security Engineer", status: SupportStatus.Supported },
+  "job-013": { title: "Product Manager", status: SupportStatus.Warning },
+  "job-014": { title: "Mobile Engineer (iOS)", status: SupportStatus.Supported },
+  "job-015": { title: "Technical Writer", status: SupportStatus.Supported },
+  "job-016": { title: "Finance Analyst", status: SupportStatus.Warning },
+  "job-017": { title: "HR Business Partner", status: SupportStatus.Unsupported },
+  "job-018": { title: "Embedded Systems Engineer", status: SupportStatus.Supported },
+  "job-019": { title: "QA Engineer", status: SupportStatus.Supported },
+  "job-020": { title: "Blockchain Developer", status: SupportStatus.Warning },
+};
+
+// Kept for test compatibility — delegates to the mock status lookup.
+// Use ingestJobs() for real API ingestion.
+export async function simulateIngest(
+  jobIds: string[]
+): Promise<IngestJobResult[]> {
   await new Promise((resolve) => setTimeout(resolve, 1200));
 
   return jobIds.map((id) => {
-    const job = MOCK_JOBS.find((j) => j.id === id);
-    if (!job) {
-      return { jobId: id, jobTitle: "Unknown", status: IngestJobResultStatus.Failed, message: "Job not found" };
+    const mock = MOCK_SUPPORT[id];
+    if (!mock) {
+      return {
+        jobId: id,
+        jobTitle: "Unknown",
+        status: IngestJobResultStatus.Failed,
+        message: "Job not found",
+      };
     }
-    if (job.supportStatus === SupportStatus.Unsupported) {
-      return { jobId: id, jobTitle: job.title, status: IngestJobResultStatus.Failed, message: "Job is unsupported" };
+    if (mock.status === SupportStatus.Unsupported) {
+      return {
+        jobId: id,
+        jobTitle: mock.title,
+        status: IngestJobResultStatus.Failed,
+        message: "Job is unsupported",
+      };
     }
-    if (job.supportStatus === SupportStatus.Warning && Math.random() < 0.3) {
-      return { jobId: id, jobTitle: job.title, status: IngestJobResultStatus.Failed, message: "Validation failed due to warnings" };
-    }
-    return { jobId: id, jobTitle: job.title, status: IngestJobResultStatus.Success };
+    return { jobId: id, jobTitle: mock.title, status: IngestJobResultStatus.Success };
   });
 }
