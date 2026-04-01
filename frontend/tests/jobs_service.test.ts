@@ -1,105 +1,360 @@
-import { describe, it, expect } from "vitest";
-import { fetchJobs, fetchJobById, simulateIngest } from "@/services/jobs_service";
-import { SupportStatus, JobType, IngestJobResultStatus } from "@/models/job_models";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  fetchJobs,
+  fetchJobById,
+  ingestJobs,
+  updateJob,
+  deactivateJob,
+  deleteJob,
+} from "@/services/jobs_service";
+import {
+  JobType,
+  RemoteStatus,
+  Experience,
+  Sponsorship,
+} from "@/models/job_models";
+import {
+  SourceAttribution,
+  RelevanceOutcome,
+  LifecycleStatus,
+  JobPostResponse,
+  ListJobPostsResponse,
+} from "@/types/api_types";
+
+function makeJobResponse(overrides: Partial<JobPostResponse> = {}): JobPostResponse {
+  return {
+    id: "00000000-0000-0000-0000-000000000001",
+    title: "Software Engineer",
+    company: "Acme Corp",
+    location: "Remote",
+    remote_status: RemoteStatus.remote,
+    experience: Experience.senior,
+    job_type: JobType.full_time,
+    main_skillset: "Python",
+    skills: ["Python", "FastAPI"],
+    sponsorship: Sponsorship.yes,
+    posted_date: "2026-03-15",
+    mandatory_requirements_summary: "5+ years experience",
+    source_attribution: SourceAttribution.linkedin,
+    posting_link: "https://linkedin.com/jobs/1",
+    relevance_outcome: RelevanceOutcome.ai,
+    lifecycle_status: LifecycleStatus.active,
+    created_at: "2026-03-15T10:00:00Z",
+    updated_at: "2026-03-15T10:00:00Z",
+    ...overrides,
+  };
+}
+
+function makeListResponse(overrides: Partial<ListJobPostsResponse> = {}): ListJobPostsResponse {
+  return {
+    items: [makeJobResponse()],
+    total: 1,
+    page: 1,
+    page_size: 20,
+    ...overrides,
+  };
+}
+
+function mockFetchOk(body: unknown, status = 200) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    status,
+    json: () => Promise.resolve(body),
+  });
+}
+
+function mockFetchError(status: number, detail = "Not found") {
+  return vi.fn().mockResolvedValue({
+    ok: false,
+    status,
+    json: () => Promise.resolve({ detail }),
+  });
+}
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", mockFetchOk(makeListResponse()));
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+// ─── fetchJobs ───────────────────────────────────────────────────────────────
 
 describe("fetchJobs", () => {
-  it("returns all jobs when no filter is applied", async () => {
-    const jobs = await fetchJobs();
-    expect(jobs.length).toBeGreaterThanOrEqual(20);
+  it("calls GET /v1/job-posts/ with no params when none provided", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs();
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toBe("/v1/job-posts/");
   });
 
-  it("filters by support status — supported only", async () => {
-    const jobs = await fetchJobs({ status: SupportStatus.Supported });
-    expect(jobs.every((j) => j.supportStatus === SupportStatus.Supported)).toBe(true);
+  it("appends job_type query param when provided", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs({ job_type: JobType.full_time });
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("job_type=full_time");
   });
 
-  it("filters by support status — unsupported only", async () => {
-    const jobs = await fetchJobs({ status: SupportStatus.Unsupported });
-    expect(jobs.length).toBeGreaterThan(0);
-    expect(jobs.every((j) => j.supportStatus === SupportStatus.Unsupported)).toBe(true);
+  it("appends experience query param when provided", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs({ experience: Experience.senior });
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("experience=senior");
   });
 
-  it("filters by job type — remote only", async () => {
-    const jobs = await fetchJobs({ jobType: JobType.Remote });
-    expect(jobs.every((j) => j.jobType === JobType.Remote)).toBe(true);
+  it("appends remote_status query param when provided", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs({ remote_status: RemoteStatus.remote });
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("remote_status=remote");
   });
 
-  it("filters by text query matching title", async () => {
-    const jobs = await fetchJobs({ query: "engineer" });
-    expect(jobs.length).toBeGreaterThan(0);
-    expect(
-      jobs.every(
-        (j) =>
-          j.title.toLowerCase().includes("engineer") ||
-          j.company.toLowerCase().includes("engineer") ||
-          j.location.toLowerCase().includes("engineer") ||
-          j.skills.some((s) => s.toLowerCase().includes("engineer"))
-      )
-    ).toBe(true);
+  it("appends sponsorship query param when provided", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs({ sponsorship: Sponsorship.yes });
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("sponsorship=yes");
   });
 
-  it("returns empty array for query with no matches", async () => {
-    const jobs = await fetchJobs({ query: "zzznomatchxxx" });
-    expect(jobs).toHaveLength(0);
+  it("appends posted_date_from and posted_date_to when provided", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs({ posted_date_from: "2026-01-01", posted_date_to: "2026-03-31" });
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("posted_date_from=2026-01-01");
+    expect(url).toContain("posted_date_to=2026-03-31");
   });
 
-  it("sorts by title alphabetically", async () => {
-    const jobs = await fetchJobs({ sort: "title" });
-    for (let i = 1; i < jobs.length; i++) {
-      expect(jobs[i - 1].title.localeCompare(jobs[i].title)).toBeLessThanOrEqual(0);
-    }
+  it("appends page and page_size when provided", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs({ page: 2, page_size: 10 });
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("page=2");
+    expect(url).toContain("page_size=10");
   });
 
-  it("sorts by most recent by default", async () => {
-    const jobs = await fetchJobs({ sort: "recent" });
-    for (let i = 1; i < jobs.length; i++) {
-      expect(jobs[i - 1].postedAt >= jobs[i].postedAt).toBe(true);
-    }
+  it("appends sort_by and sort_order when provided", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs({ sort_by: "title", sort_order: "asc" });
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("sort_by=title");
+    expect(url).toContain("sort_order=asc");
+  });
+
+  it("returns mapped DisplayJobs with pagination metadata", async () => {
+    const items = [makeJobResponse(), makeJobResponse({ id: "00000000-0000-0000-0000-000000000002", title: "Another Job" })];
+    vi.stubGlobal("fetch", mockFetchOk({ items, total: 2, page: 1, page_size: 20 }));
+
+    const result = await fetchJobs();
+
+    expect(result.jobs).toHaveLength(2);
+    expect(result.total).toBe(2);
+    expect(result.page).toBe(1);
+    expect(result.page_size).toBe(20);
+    expect(result.jobs[0].id).toBe("00000000-0000-0000-0000-000000000001");
+    expect(result.jobs[0].title).toBe("Software Engineer");
+  });
+
+  it("throws ApiError on non-2xx response", async () => {
+    vi.stubGlobal("fetch", mockFetchError(500, "Internal Server Error"));
+
+    await expect(fetchJobs()).rejects.toThrow("Internal Server Error");
+  });
+
+  it("does not append undefined params to the URL", async () => {
+    const mockFetch = mockFetchOk(makeListResponse());
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobs({ job_type: undefined, experience: undefined });
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).not.toContain("job_type");
+    expect(url).not.toContain("experience");
   });
 });
+
+// ─── fetchJobById ─────────────────────────────────────────────────────────────
 
 describe("fetchJobById", () => {
-  it("returns the correct job for a known id", async () => {
-    const job = await fetchJobById("job-001");
-    expect(job).not.toBeNull();
-    expect(job?.title).toBe("Senior Software Engineer");
+  it("calls GET /v1/job-posts/{id}", async () => {
+    const job = makeJobResponse();
+    const mockFetch = mockFetchOk(job);
+    vi.stubGlobal("fetch", mockFetch);
+
+    await fetchJobById("00000000-0000-0000-0000-000000000001");
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toBe("/v1/job-posts/00000000-0000-0000-0000-000000000001");
   });
 
-  it("returns null for an unknown id", async () => {
-    const job = await fetchJobById("not-a-real-id");
-    expect(job).toBeNull();
+  it("returns a DisplayJob on success", async () => {
+    vi.stubGlobal("fetch", mockFetchOk(makeJobResponse()));
+
+    const result = await fetchJobById("00000000-0000-0000-0000-000000000001");
+
+    expect(result).not.toBeNull();
+    expect(result?.title).toBe("Software Engineer");
+    expect(result?.companyInitials).toBe("AC");
+  });
+
+  it("returns null on 404", async () => {
+    vi.stubGlobal("fetch", mockFetchError(404, "Not found"));
+
+    const result = await fetchJobById("nonexistent-id");
+
+    expect(result).toBeNull();
+  });
+
+  it("re-throws non-404 errors", async () => {
+    vi.stubGlobal("fetch", mockFetchError(500, "Server error"));
+
+    await expect(fetchJobById("some-id")).rejects.toThrow("Server error");
   });
 });
 
-describe("simulateIngest", () => {
-  it("returns a result for each submitted job id", async () => {
-    const ids = ["job-001", "job-006", "job-009"];
-    const results = await simulateIngest(ids);
-    expect(results).toHaveLength(3);
-    expect(results.map((r) => r.jobId)).toEqual(expect.arrayContaining(ids));
+// ─── ingestJobs ───────────────────────────────────────────────────────────────
+
+describe("ingestJobs", () => {
+  it("calls POST /v1/job-posts/ingest with correct body", async () => {
+    const mockFetch = mockFetchOk([makeJobResponse()]);
+    vi.stubGlobal("fetch", mockFetch);
+
+    const payload = [
+      {
+        title: "Engineer",
+        company: "Corp",
+        source_attribution: SourceAttribution.linkedin,
+      },
+    ];
+    await ingestJobs(payload);
+
+    const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/v1/job-posts/ingest");
+    expect(options.method).toBe("POST");
+    const body = JSON.parse(options.body as string);
+    expect(body.postings).toHaveLength(1);
+    expect(body.postings[0].title).toBe("Engineer");
+    expect(body.postings[0].source_attribution).toBe("linkedin");
   });
 
-  it("marks supported jobs as success", async () => {
-    // job-001 is supported, should always succeed
-    const results = await simulateIngest(["job-001"]);
-    expect(results[0].status).toBe(IngestJobResultStatus.Success);
+  it("returns IngestJobResult array with Success status on 201", async () => {
+    vi.stubGlobal("fetch", mockFetchOk([makeJobResponse()], 201));
+
+    const results = await ingestJobs([
+      { title: "Engineer", company: "Corp", source_attribution: SourceAttribution.linkedin },
+    ]);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].status).toBe("success");
+    expect(results[0].jobTitle).toBe("Software Engineer");
   });
 
-  it("marks unsupported jobs as failed", async () => {
-    // job-005 is unsupported
-    const results = await simulateIngest(["job-005"]);
-    expect(results[0].status).toBe(IngestJobResultStatus.Failed);
-    expect(results[0].message).toBeTruthy();
+  it("throws on non-2xx response", async () => {
+    vi.stubGlobal("fetch", mockFetchError(422, "Validation error"));
+
+    await expect(
+      ingestJobs([{ title: "", company: "Corp", source_attribution: SourceAttribution.linkedin }])
+    ).rejects.toThrow("Validation error");
+  });
+});
+
+// ─── updateJob ────────────────────────────────────────────────────────────────
+
+describe("updateJob", () => {
+  it("calls PUT /v1/job-posts/{id} with patch body", async () => {
+    const mockFetch = mockFetchOk(makeJobResponse({ title: "Updated Title" }));
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await updateJob("00000000-0000-0000-0000-000000000001", { title: "Updated Title" });
+
+    const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/v1/job-posts/00000000-0000-0000-0000-000000000001");
+    expect(options.method).toBe("PUT");
+    const body = JSON.parse(options.body as string);
+    expect(body.title).toBe("Updated Title");
+    expect(result.title).toBe("Updated Title");
   });
 
-  it("returns failed result for unknown job ids", async () => {
-    const results = await simulateIngest(["unknown-id-xyz"]);
-    expect(results[0].status).toBe(IngestJobResultStatus.Failed);
-    expect(results[0].jobTitle).toBe("Unknown");
+  it("throws on 404", async () => {
+    vi.stubGlobal("fetch", mockFetchError(404, "Job post not found"));
+
+    await expect(
+      updateJob("nonexistent-id", { title: "New" })
+    ).rejects.toThrow("Job post not found");
+  });
+});
+
+// ─── deactivateJob ────────────────────────────────────────────────────────────
+
+describe("deactivateJob", () => {
+  it("calls POST /v1/job-posts/{id}/deactivate", async () => {
+    const mockFetch = mockFetchOk(
+      makeJobResponse({ lifecycle_status: LifecycleStatus.deactivated })
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await deactivateJob("00000000-0000-0000-0000-000000000001");
+
+    const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/v1/job-posts/00000000-0000-0000-0000-000000000001/deactivate");
+    expect(options.method).toBe("POST");
+    expect(result.lifecycle_status).toBe(LifecycleStatus.deactivated);
   });
 
-  it("handles empty input gracefully", async () => {
-    const results = await simulateIngest([]);
-    expect(results).toHaveLength(0);
+  it("throws on 409 conflict (invalid lifecycle transition)", async () => {
+    vi.stubGlobal("fetch", mockFetchError(409, "Invalid lifecycle transition"));
+
+    await expect(deactivateJob("some-id")).rejects.toThrow("Invalid lifecycle transition");
+  });
+});
+
+// ─── deleteJob ────────────────────────────────────────────────────────────────
+
+describe("deleteJob", () => {
+  it("calls DELETE /v1/job-posts/{id}", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await deleteJob("00000000-0000-0000-0000-000000000001");
+
+    const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/v1/job-posts/00000000-0000-0000-0000-000000000001");
+    expect(options.method).toBe("DELETE");
+  });
+
+  it("throws on 404", async () => {
+    vi.stubGlobal("fetch", mockFetchError(404, "Job post not found"));
+
+    await expect(deleteJob("nonexistent-id")).rejects.toThrow("Job post not found");
+  });
+
+  it("resolves void on 204", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 204 }));
+
+    await expect(deleteJob("some-id")).resolves.toBeUndefined();
   });
 });
