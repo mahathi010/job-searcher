@@ -1,21 +1,12 @@
-# job_searcher
+# job_searcher - Frontend
 
 ## Setup
 
 1. Copy `.env.example` to `.env` and configure
-2. Install dependencies: `pip install -r backend/requirements.txt`
-3. Run: `cd backend && uvicorn app.main:app --reload`
-
-## Docker
-
-```bash
-docker-compose up -d
-```
+2. Install dependencies: `npm install`
+3. Run dev server: `npm run dev`
+4. Run tests: `npm test`
 
 ## Project Structure
 
-- `backend/` — All backend code (app, tests, migrations)
-- `docs/` — Architecture documentation
-- `scripts/` — Utility scripts
-
-See `CONVENTIONS.md` at the project root for the 6-file module pattern.
+See the `frontend/src/` directory for the application source code.
